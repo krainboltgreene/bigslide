@@ -7,16 +7,9 @@ module Bigslide
     set :root, File.dirname(File.join(__FILE__, "..", ".."))
 
     INDEX_URI = "http://feeds.boston.com/boston/bigpicture/index"
-    INDEX = Nokogiri::XML(open(INDEX_URI)).css("item link").map(&:inner_text)
-    IMAGES = INDEX.map do |group_uri|
-      Nokogiri::HTML(open(group_uri)).css(".bpImage").map { |n| n["src"] }.map.with_index do |image_uri, index|
-        {
-          position: index,
-          source: image_uri,
-          class: ("active" if index.zero?)
-        }
-      end
-    end
+    INDEX = Nokogiri::XML(open(INDEX_URI)).css("item link").map(&:inner_text).reverse
+    SLIDES = Slide[INDEX]
+
     TEMPLATE = <<-TEMPLATE
 <!DOCTYPE html>
 <!--[if lt IE 7]> <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
@@ -26,8 +19,8 @@ module Bigslide
   <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Onebox Example</title>
-    <meta name="description" content="An example of the onebox gem">
+    <title>The Big Slide</title>
+    <meta name="description" content="A slide of all the Big Shot">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/styles/bigslide.css">
@@ -36,24 +29,27 @@ module Bigslide
     <!--[if lt IE 7]>
       <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
-
-    <div id="bigslide" class="carousel slide" data-ride="carousel">
+    <div id="bigslide" class="carousel slide" data-ride="carousel" data-interval="3000" data-interval="false">
       <ol class="carousel-indicators">
         {{#images}}
-          <li data-target="#bigslide" data-slide-to="{{position}}" class="{{class}}"></li>
+          <li data-target="#bigslide" data-slide-to="{{position}}" class="{{active}}"></li>
         {{/images}}
       </ol>
 
-      <!-- Wrapper for slides -->
       <div class="carousel-inner">
         {{#images}}
-          <div class="item {{class}}">
+          <div class="item {{active}}">
             <img src="{{source}}" width="100%">
+            <div class="carousel-caption">
+              <p>
+                {{caption}}
+              </p>
+            </div>
           </div>
+
         {{/images}}
       </div>
 
-      <!-- Controls -->
       <a class="left carousel-control" href="#bigslide" data-slide="prev">
         <span class="glyphicon glyphicon-chevron-left"></span>
       </a>
@@ -62,18 +58,41 @@ module Bigslide
       </a>
     </div>
 
+    <nav class="navbar navbar-default" role="navigation">
+      {{#meta}}
+        <a href="/slides/{{back}}">
+          <button type="button" class="btn btn-default navbar-btn">Back</button>
+        </a>
+        <a href="/slides/{{forward}}">
+          <button type="button" class="btn btn-default navbar-btn navbar-right">Forward</button>
+        </a>
+      {{/meta}}
+    </nav>
+
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
     <script src="//netdna.bootstrapcdn.com/bootstrap/3.0.2/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+      $("#bigslide").on("slid.bs.carousel", function() {
+        if($(".carousel-inner .item:last").hasClass("active")) {
+          setTimeout(function() {
+            var href = $(".navbar a:last").attr("href");
+            window.location = href;
+          }, 2750);
+        };
+      });
+      var last = $("#bigslide .image:last-of-type")
+      last.trigger("cssClassChanged")
+    </script>
   </body>
 </html>
       TEMPLATE
 
     get "/" do
-      redirect "/slides/1"
+      redirect "/slides/0"
     end
 
     get "/slides/:id" do |id|
-      Mustache.render(TEMPLATE, images: IMAGES[id.to_i])
+      Mustache.render(TEMPLATE, SLIDES[id.to_i].to_hash)
     end
   end
 end
