@@ -4,10 +4,9 @@ require_relative "../bigslide"
 module Bigslide
   class Server < Sinatra::Base
     set :logging, true
-    set :root, File.dirname(File.join(__FILE__, "..", ".."))
 
     INDEX_URI = "http://feeds.boston.com/boston/bigpicture/index"
-    INDEX = Nokogiri::XML(open(INDEX_URI)).css("item link").map(&:inner_text).reverse
+    INDEX = Nokogiri::XML(open(INDEX_URI)).css("item link").map(&:inner_text)
     SLIDES = Slide[INDEX]
 
     TEMPLATE = <<-TEMPLATE
@@ -23,13 +22,33 @@ module Bigslide
     <meta name="description" content="A slide of all the Big Shot">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="//netdna.bootstrapcdn.com/bootstrap/3.0.2/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/styles/bigslide.css">
+    <style type="text/css">
+      .navbar-default.navbar-fixed-top {
+        background: transparent;
+        border-color: transparent;
+        text-align: center;
+      }
+
+      .navbar-fixed-top button {
+        background-color: rgba(52, 73, 94, 0.25);
+        border-color: transparent;
+      }
+
+      .carousel-caption {
+        margin-bottom: 125px;
+        background-color: rgba(52, 73, 94, 0.25);
+      }
+    </style>
   </head>
   <body>
     <!--[if lt IE 7]>
       <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
     <![endif]-->
-    <div id="bigslide" class="carousel slide" data-ride="carousel" data-interval="3000" data-interval="false">
+    <nav class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <button type="button" class="btn btn-default navbar-btn">{{name}}</button>
+    </nav>
+
+    <div id="bigslide" class="carousel slide" data-ride="carousel" data-interval="3000" data-wrap="false" data-interval="false">
       <ol class="carousel-indicators">
         {{#images}}
           <li data-target="#bigslide" data-slide-to="{{position}}" class="{{active}}"></li>
@@ -77,7 +96,7 @@ module Bigslide
           setTimeout(function() {
             var href = $(".navbar a:last").attr("href");
             window.location = href;
-          }, 2750);
+          }, 3000);
         };
       });
       var last = $("#bigslide .image:last-of-type")
@@ -85,7 +104,7 @@ module Bigslide
     </script>
   </body>
 </html>
-      TEMPLATE
+    TEMPLATE
 
     get "/" do
       redirect "/slides/0"
